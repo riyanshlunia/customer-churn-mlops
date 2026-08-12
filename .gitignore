@@ -1,0 +1,25 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# MLOps & MLflow temporary files
+mlruns/
+mlflow.db
+*.db
+*.sqlite
+
+# Large generated artifacts & models (if untracked)
+artifacts/*.pkl
+artifacts/*.joblib
+
+# IDE & OS files
+.vscode/
+.idea/
+.DS_Store
+*.log
