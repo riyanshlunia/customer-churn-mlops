@@ -14,6 +14,7 @@ from dashboard.components.customer_risk import render_customer_risk
 from dashboard.components.model_performance import render_model_performance
 from dashboard.components.drift_monitoring import render_drift_monitoring
 from dashboard.components.experiments import render_experiments
+from dashboard.components.introduction import render_introduction
 
 from src.data_pipeline import DataPipeline
 from src.explainability import ChurnExplainer
@@ -55,7 +56,9 @@ def main():
     pipeline, explainer, detector = get_cached_components(dataset_key, model_type)
 
     # Router to Selected Page
-    if selected_page == "Overview":
+    if selected_page == "Introduction":
+        render_introduction()
+    elif selected_page == "Overview":
         render_overview(pipeline, explainer, detector, dataset_key, model_type, calibration_method)
     elif selected_page == "Customer Risk":
         render_customer_risk(pipeline, explainer, dataset_key, model_type, calibration_method)

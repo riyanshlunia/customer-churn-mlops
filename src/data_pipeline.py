@@ -37,6 +37,9 @@ class DataPipeline:
 
         df = pd.read_csv(file_path)
 
+        # Convert all columns to standard pandas-native dtypes (avoid PyArrow backend)
+        df = df.convert_dtypes(convert_string=False)
+
         # =========================================================================
         # REAL-WORLD DATASET QUIRKS & SANITIZATION
         # =========================================================================
@@ -62,16 +65,17 @@ class DataPipeline:
         """Fit preprocessor on real dataframe and return processed X matrix, y vector, and raw features df."""
         target_col = self.config["target_col"]
 
-        # Parse target variable (handles both string 'Yes'/'No' and integer 0/1)
-        if df[target_col].dtype == object:
-            y = (df[target_col].str.strip().str.lower() == "yes").astype(int).values
+        # Parse target variable - always coerce via string to handle PyArrow/object/int dtypes uniformly
+        target_series = df[target_col].astype(str).str.strip().str.lower()
+        if target_series.isin(["yes", "no", "true", "false"]).any():
+            y = (target_series == "yes").to_numpy().astype(np.int32)
         else:
-            y = df[target_col].values
+            y = pd.to_numeric(df[target_col], errors="coerce").fillna(0).to_numpy().astype(np.int32)
 
         num_cols = self.config["numerical_features"]
         cat_cols = self.config["categorical_features"]
 
-        X_df = df[num_cols + cat_cols].copy()
+        X_df = df[num_cols + cat_cols].copy().reset_index(drop=True)
 
         # Build sklearn column transformer: StandardScaler for numerical, OneHotEncoder for categorical
         num_transformer = StandardScaler()
@@ -134,15 +138,34 @@ class DataPipeline:
         X_proc, y, X_raw = self.fit_transform(df)
 
         # First split: Train+Val vs Test
-        X_train_val, X_test, y_train_val, y_test, X_train_val_raw, X_test_raw = train_test_split(
-            X_proc, y, X_raw, test_size=test_size, random_state=random_state, stratify=y
+        indices = np.arange(len(y))
+        idx_train_val, idx_test = train_test_split(
+            indices, test_size=test_size, random_state=random_state, stratify=y
         )
+        
+        y_train_val = y[idx_train_val]
+        y_test = y[idx_test]
+        
+        X_train_val = X_proc[idx_train_val]
+        X_test = X_proc[idx_test]
+        
+        X_train_val_raw = X_raw.iloc[idx_train_val].copy()
+        X_test_raw = X_raw.iloc[idx_test].copy()
 
         # Second split: Train vs Validation
         val_relative_size = val_size / (1.0 - test_size)
-        X_train, X_val, y_train, y_val, X_train_raw, X_val_raw = train_test_split(
-            X_train_val, y_train_val, X_train_val_raw, test_size=val_relative_size, random_state=random_state, stratify=y_train_val
+        idx_train, idx_val = train_test_split(
+            np.arange(len(y_train_val)), test_size=val_relative_size, random_state=random_state, stratify=y_train_val
         )
+        
+        y_train = y_train_val[idx_train]
+        y_val = y_train_val[idx_val]
+        
+        X_train = X_train_val[idx_train]
+        X_val = X_train_val[idx_val]
+        
+        X_train_raw = X_train_val_raw.iloc[idx_train].copy()
+        X_val_raw = X_train_val_raw.iloc[idx_val].copy()
 
         # Save training reference baseline CSV for drift monitoring
         ref_path = ARTIFACTS_DIR / f"{self.dataset_key}_reference_baseline.csv"

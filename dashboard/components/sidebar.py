@@ -42,12 +42,12 @@ def render_sidebar():
     st.sidebar.markdown("---")
     st.sidebar.markdown("### Navigation")
 
-    page_options = ["Overview", "Customer Risk", "Model Performance", "Drift Monitoring", "Experiments"]
+    page_options = ["Introduction", "Overview", "Customer Risk", "Model Performance", "Drift Monitoring", "Experiments"]
 
     # Read current page from browser URL query parameter (enables browser Back / Forward buttons)
-    query_page = st.query_params.get("page", "Overview")
+    query_page = st.query_params.get("page", "Introduction")
     if query_page not in page_options:
-        query_page = "Overview"
+        query_page = "Introduction"
 
     if "nav_page" not in st.session_state:
         st.session_state["nav_page"] = query_page

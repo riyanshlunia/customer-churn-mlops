@@ -16,7 +16,6 @@ mlflow.db
 
 # Large generated artifacts & models (if untracked)
 artifacts/*.pkl
-artifacts/*.joblib
 
 # IDE & OS files
 .vscode/
